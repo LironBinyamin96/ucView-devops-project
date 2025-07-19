@@ -1,0 +1,35 @@
+---
+- name: Install UCView on private EC2
+  shell: |
+    tar -xzf "{{ tar_name }}"
+    echo "deb [trusted=yes] file:/home/ubuntu/{{ package_dir }} ./" | sudo tee /etc/apt/sources.list.d/localrepo.list
+    sudo sed -i 's|^|#|' /etc/apt/sources.list.d/ubuntu.sources || true
+    sudo apt update
+    sudo apt install -y ucview-appliance8 ucview-nginx8
+    sleep 10
+    curl -I http://localhost/user/server_sign_up || echo "installation failed"
+  register: install_output
+  delegate_to: "{{ hostvars['private-ec2'].ansible_host }}"
+  remote_user: "{{ ssh_user }}"
+  become: true
+  vars:
+    ansible_host_key_checking: False 
+    ansible_ssh_private_key_file: "{{ local_key_path }}"
+    ansible_ssh_common_args: >-
+      -o ProxyCommand="ssh -i {{ local_key_path }} -W %h:%p {{ ssh_user }}@{{ hostvars['public-ec2'].ansible_host }}"
+
+- name: Show installation output
+  debug:
+    var: install_output.stdout_lines
+
+- name: Remove private SSH key from public EC2
+  file:
+    path: "{{ remote_key_path }}"
+    state: absent
+  delegate_to: "{{ hostvars['public-ec2'].ansible_host }}"
+  remote_user: "{{ ssh_user }}"
+  become: true
+  vars:
+    ansible_ssh_private_key_file: "{{ local_key_path }}"
+    ansible_ssh_common_args: >-
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null

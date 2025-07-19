@@ -1,0 +1,17 @@
+# Ignore Terraform state and sensitive files
+*.tfstate
+*.tfstate.backup
+*.tfvars
+*.tfplan
+.crash.log
+.terraform/
+
+# Ignore Ansible cache
+*.retry
+
+# Ignore OS & editor-specific files
+.DS_Store
+*.swp
+*.swo
+.idea/
+.vscode

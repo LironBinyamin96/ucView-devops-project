@@ -1,0 +1,36 @@
+---
+- name: Prepare public EC2 for UCView installation
+  shell: |
+    chmod 700 /home/ubuntu
+    chmod 600 {{ remote_key_path }}
+
+    curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null
+    echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/ubuntu $(lsb_release -cs) nginx" | sudo tee /etc/apt/sources.list.d/nginx.list
+
+    curl https://packages.ucview.com/public.gpg | gpg --dearmor | sudo tee /usr/share/keyrings/ucview-archive-keyring.gpg >/dev/null
+    echo "deb [signed-by=/usr/share/keyrings/ucview-archive-keyring.gpg] http://packages.ucview.com/dists/$(lsb_release -cs) ./" | sudo tee /etc/apt/sources.list.d/ucview.list
+
+    sudo apt-get update
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ucview-appliance8 ucview-nginx8
+
+    mkdir -p /home/ubuntu/"{{ package_dir }}"
+    cp /var/cache/apt/archives/*.deb /home/ubuntu/"{{ package_dir }}/" 2>/dev/null || echo "no debs"
+    cd /home/ubuntu/"{{ package_dir }}"
+    dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
+    dpkg-scanpackages . /dev/null > Packages
+    cd /home/ubuntu
+    tar -czf "{{ tar_name }}" "{{ package_dir }}"
+
+    ssh-keyscan -H {{ private_ip }} >> /home/ubuntu/.ssh/known_hosts
+    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {{ remote_key_path }} "{{ tar_name }}" {{ ssh_user }}@{{ private_ip }}:/home/{{ ssh_user }}/
+  register: install_output
+  delegate_to: "{{ public_ip }}"
+  become: true
+  remote_user: "{{ ssh_user }}"
+  vars:
+    ansible_ssh_private_key_file: "{{ local_key_path }}"
+    ansible_host_key_checking: False 
+
+- name: Show installation output
+  debug:
+    var: install_output.stdout_lines

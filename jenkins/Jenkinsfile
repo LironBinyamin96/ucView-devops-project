@@ -1,0 +1,21 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Terraform Init + Apply') {
+            steps {
+                dir('terraform') {
+                    sh 'terraform init'
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
+        stage('Run Ansible') {
+            steps {
+                dir('ansible') {
+                    sh 'ansible-playbook -i inventory/hosts.ini site.yml'
+                }
+            }
+        }
+    }
+}
