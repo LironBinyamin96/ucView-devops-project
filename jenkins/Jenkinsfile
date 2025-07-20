@@ -13,7 +13,7 @@ pipeline {
         stage('Run Ansible') {
             steps {
                 dir('ansible') {
-                    sh 'ansible-playbook -i inventory/hosts.ini site.yml'
+                    sh 'ansible-playbook -i inventory.ini playbook.yml'
                 }
             }
         }
