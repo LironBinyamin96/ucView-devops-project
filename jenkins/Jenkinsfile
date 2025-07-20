@@ -1,12 +1,16 @@
 pipeline {
     agent any
 
+    environment {
+    TF_VAR_FILE = credentials('terraform-vars-file')
+  }
     stages {
         stage('Terraform Init + Apply') {
             steps {
                 dir('terraform') {
+                    withCredentials([file(credentialsId: 'terraform-vars-file', variable: 'TFVARS_FILE')]) {
                     sh 'terraform init'
-                    sh 'terraform apply -auto-approve'
+                    sh 'terraform apply -auto-approve -var-file=$TFVARS_FILE'
                 }
             }
         }
