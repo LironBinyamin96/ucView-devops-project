@@ -81,28 +81,28 @@
 
     - name: Create local package directory
       ansible.builtin.file:
-        path: /home/ubuntu/"{{ package_dir }}"
+        path: /home/ubuntu/{{ package_dir }}
         state: directory
         mode: '0755'
 
     - name: Copy downloaded .deb packages to local directory
       ansible.builtin.shell: |
-        cp /var/cache/apt/archives/*.deb /home/ubuntu/"{{ package_dir }}/" 2>/dev/null || echo "no debs"
+        cp /var/cache/apt/archives/*.deb /home/ubuntu/{{ package_dir }}/ 2>/dev/null || echo "no debs"
       args:
         chdir: /home/ubuntu 
 
     - name: Generate Packages.gz and Packages files for local repo
       ansible.builtin.shell: |
-        cd /home/ubuntu/"{{ package_dir }}"
+        cd /home/ubuntu/{{ package_dir }}
         dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
         dpkg-scanpackages . /dev/null > Packages
       args:
-        chdir: /home/ubuntu/"{{ package_dir }}" 
+        chdir: /home/ubuntu/{{ package_dir }}
 
     - name: Create tar archive of local package directory
       ansible.builtin.archive:
-        path: /home/ubuntu/"{{ package_dir }}"
-        dest: /home/ubuntu/"{{ tar_name }}"
+        path: /home/ubuntu/{{ package_dir }}
+        dest: /home/ubuntu/{{ tar_name }}
         format: gz
    
     - name: Add private EC2 host key to known_hosts on public EC2
