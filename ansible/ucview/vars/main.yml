@@ -1,7 +1,7 @@
 ---
 ssh_user: "ubuntu"
 local_key_path: "/var/lib/jenkins/.ssh/publicEC2-key.pem"
-remote_key_path: "/var/lib/jenkins/.ssh/publicEC2-key.pem"
+remote_key_path: "/home/ubuntu/.ssh/publicEC2-key.pem"
 key_filename: "publicEC2-key.pem"
 package_dir: "offline-debs"
 tar_name: "ucview-installation.tar.gz"
