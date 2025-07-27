@@ -7,9 +7,14 @@
     public_ip: "{{ hostvars['public-ec2'].ansible_host }}"
     private_ip: "{{ hostvars['private-ec2'].ansible_host }}"
 
-- name: Show public_ip
-  debug:
-    var: public_ip
+- name: Wait for SSH on public EC2
+  wait_for:
+    host: "{{ public_ip }}"
+    port: 22
+    delay: 5
+    timeout: 180
+    state: started
+  delegate_to: localhost
 
 - name: Copy SSH key to public machine
   copy:

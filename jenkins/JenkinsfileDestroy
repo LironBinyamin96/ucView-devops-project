@@ -6,7 +6,7 @@ pipeline {
     }
 
     stages {
-        stage('Terraform Init + Apply') {
+        stage('Terraform Destroy') {
             steps {
                 dir('terraform') {
                     withCredentials([file(credentialsId: 'terraform-vars-file', variable: 'TFVARS_FILE')]) {
@@ -16,3 +16,5 @@ pipeline {
                 }
             }
         }
+    }
+}
