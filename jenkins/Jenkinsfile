@@ -20,7 +20,7 @@ pipeline {
         stage('Run Ansible') {
             steps {
                 dir('ansible') {
-                    sh '/var/local/bin/ansible-playbook -i inventory.ini playbook.yml'
+                    sh '/usr/local/bin/ansible-playbook -i inventory.ini playbook.yml'
                 }
             }
         }
