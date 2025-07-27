@@ -43,9 +43,8 @@
         state: present
         filename: ucview
 
-    - name: Update apt cache
-      ansible.builtin.apt:
-        update_cache: yes
+    - name: Run apt-get update manually
+      ansible.builtin.shell: apt-get update
 
     - name: Install UCView Appliance and Nginx packages
       ansible.builtin.apt:
@@ -56,9 +55,14 @@
         update_cache: yes
         force_apt_get: yes # Force apt-get usage, sometimes needed for noninteractive scenarios
 
-    - name: Show installation output
+    - name: Verify UCView installation with curl
+      ansible.builtin.shell: curl -I http://localhost/user/server_sign_up || echo "installation failed"
+      become: true
+      register: ucview_check
+
+    - name: Show UCView curl response
       debug:
-        var: install_output.stdout_lines 
+        var: ucview_check.stdout_lines
 
     - name: Create local package directory
       ansible.builtin.file:
