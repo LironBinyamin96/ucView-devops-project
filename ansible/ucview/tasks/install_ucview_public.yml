@@ -92,10 +92,9 @@
       delegate_to: "{{ hostvars['public-ec2'].ansible_host }}"
       remote_user: ubuntu
 
-    - name: Copy tar archive to private EC2
-      ansible.builtin.copy:
-        src: "/home/ubuntu/{{ tar_name }}" # the path on the public EC2
-        dest: "/home/{{ ssh_user }}/{{ tar_name }}" # the path on the private EC2
-        remote_src: yes 
-      delegate_to: "{{ private_ip }}" # copying to the private EC2 instance
-      remote_user: "{{ ssh_user }}" 
+- name: Copy tar archive to private EC2 using scp from public EC2
+  ansible.builtin.shell: |
+    scp -o StrictHostKeyChecking=no -i {{ remote_key_path }} /home/ubuntu/{{ tar_name }} {{ ssh_user }}@{{ private_ip }}:/home/{{ ssh_user }}/
+  delegate_to: "{{ hostvars['public-ec2'].ansible_host }}"
+  become: true
+  remote_user: "{{ ssh_user }}"
