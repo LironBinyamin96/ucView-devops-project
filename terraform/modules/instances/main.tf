@@ -1,6 +1,6 @@
 resource "aws_key_pair" "liron-key" {
   key_name   = "var.key_name"
-  public_key = file(var.public_key_path)
+  public_key = file("/var/lib/jenkins/.ssh/publicEC2-key.pub")
 }
 
 resource "aws_instance" "public" { # יצירת מכונה ציבורית

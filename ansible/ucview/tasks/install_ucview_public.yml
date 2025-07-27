@@ -1,36 +1,106 @@
----
 - name: Prepare public EC2 for UCView installation
-  shell: |
-    chmod 700 /home/ubuntu
-    chmod 600 {{ remote_key_path }}
-
-    curl https://nginx.org/keys/nginx_signing.key | gpg --dearmor | sudo tee /usr/share/keyrings/nginx-archive-keyring.gpg >/dev/null
-    echo "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/ubuntu $(lsb_release -cs) nginx" | sudo tee /etc/apt/sources.list.d/nginx.list
-
-    curl https://packages.ucview.com/public.gpg | gpg --dearmor | sudo tee /usr/share/keyrings/ucview-archive-keyring.gpg >/dev/null
-    echo "deb [signed-by=/usr/share/keyrings/ucview-archive-keyring.gpg] http://packages.ucview.com/dists/$(lsb_release -cs) ./" | sudo tee /etc/apt/sources.list.d/ucview.list
-
-    sudo apt-get update
-    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ucview-appliance8 ucview-nginx8
-
-    mkdir -p /home/ubuntu/"{{ package_dir }}"
-    cp /var/cache/apt/archives/*.deb /home/ubuntu/"{{ package_dir }}/" 2>/dev/null || echo "no debs"
-    cd /home/ubuntu/"{{ package_dir }}"
-    dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
-    dpkg-scanpackages . /dev/null > Packages
-    cd /home/ubuntu
-    tar -czf "{{ tar_name }}" "{{ package_dir }}"
-
-    ssh-keyscan -H {{ private_ip }} >> /home/ubuntu/.ssh/known_hosts
-    scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {{ remote_key_path }} "{{ tar_name }}" {{ ssh_user }}@{{ private_ip }}:/home/{{ ssh_user }}/
-  register: install_output
-  delegate_to: "{{ public_ip }}"
-  become: true
-  remote_user: "{{ ssh_user }}"
+  delegate_to: "{{ public_ip }}" # all tasks in this block will run on the public EC2 instance
+  become: true # all tasks in this block will run with sudo (like root)
+  remote_user: "{{ ssh_user }}" 
   vars:
     ansible_ssh_private_key_file: "{{ local_key_path }}"
-    ansible_host_key_checking: False 
+    ansible_host_key_checking: False # disables the security prompt (as discussed)
+  block:
 
-- name: Show installation output
-  debug:
-    var: install_output.stdout_lines
+    - name: Ensure /home/ubuntu has correct permissions
+      ansible.builtin.file:
+        path: /home/ubuntu
+        mode: '0700'
+        state: directory
+
+    - name: Set permissions for remote SSH key
+      ansible.builtin.file:
+        path: "{{ remote_key_path }}"
+        mode: '0600' 
+        state: file 
+
+    - name: Add Nginx GPG key
+      ansible.builtin.apt_key:
+        url: https://nginx.org/keys/nginx_signing.key
+        keyring: /usr/share/keyrings/nginx-archive-keyring.gpg
+        state: present
+
+    - name: Add Nginx APT repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/nginx-archive-keyring.gpg] http://nginx.org/packages/ubuntu {{ ansible_distribution_release }} nginx"
+        state: present
+        filename: nginx
+
+    - name: Add UCView GPG key
+      ansible.builtin.apt_key:
+        url: https://packages.ucview.com/public.gpg
+        keyring: /usr/share/keyrings/ucview-archive-keyring.gpg
+        state: present
+
+    - name: Add UCView APT repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/usr/share/keyrings/ucview-archive-keyring.gpg] http://packages.ucview.com/dists/{{ ansible_distribution_release }} ./"
+        state: present
+        filename: ucview
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Install UCView Appliance and Nginx packages
+      ansible.builtin.apt:
+        name:
+          - ucview-appliance8
+          - ucview-nginx8
+        state: present
+        update_cache: yes
+        force_apt_get: yes # Force apt-get usage, sometimes needed for noninteractive scenarios
+
+    - name: Show installation output
+      debug:
+        var: install_output.stdout_lines 
+
+    - name: Create local package directory
+      ansible.builtin.file:
+        path: /home/ubuntu/"{{ package_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Copy downloaded .deb packages to local directory
+      ansible.builtin.shell: |
+        cp /var/cache/apt/archives/*.deb /home/ubuntu/"{{ package_dir }}/" 2>/dev/null || echo "no debs"
+      args:
+        chdir: /home/ubuntu 
+
+    - name: Generate Packages.gz and Packages files for local repo
+      ansible.builtin.shell: |
+        cd /home/ubuntu/"{{ package_dir }}"
+        dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz
+        dpkg-scanpackages . /dev/null > Packages
+      args:
+        chdir: /home/ubuntu/"{{ package_dir }}" 
+
+    - name: Create tar archive of local package directory
+      ansible.builtin.archive:
+        path: /home/ubuntu/"{{ package_dir }}"
+        dest: /home/ubuntu/"{{ tar_name }}"
+        format: gz
+   
+    - name: Add private EC2 host key to known_hosts on public EC2
+      ansible.builtin.known_hosts:
+        name: "{{ private_ip }}"
+        key: "{{ lookup('pipe', 'ssh-keyscan -H {{ private_ip }}') }}"
+        state: present
+
+    - name: Copy tar archive to private EC2
+      ansible.builtin.copy:
+        src: "/home/ubuntu/{{ tar_name }}" # the path on the public EC2
+        dest: "/home/{{ ssh_user }}/{{ tar_name }}" # the path on the private EC2
+        remote_src: yes 
+      delegate_to: "{{ private_ip }}" # copying to the private EC2 instance
+      remote_user: "{{ ssh_user }}" 
+      # vars:
+      #   ansible_ssh_private_key_file: "{{ local_key_path }}"
+      #   ansible_ssh_common_args: >-
+      #     -o ProxyCommand="ssh -W %h:%p -q {{ ssh_user }}@{{ public_ip }}"
+
