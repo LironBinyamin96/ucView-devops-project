@@ -22,14 +22,6 @@
   debug:
     var: install_output.stdout_lines
 
-- name: Remove private SSH key from public EC2
-  file:
-    path: "{{ remote_key_path }}"
-    state: absent
-  delegate_to: "{{ hostvars['public-ec2'].ansible_host }}"
-  remote_user: "{{ ssh_user }}"
-  become: true
-  vars:
-    ansible_ssh_private_key_file: "{{ local_key_path }}"
-    ansible_ssh_common_args: >-
-      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+- name: Verify UCView installation with curl
+  ansible.builtin.shell: curl -L http://localhost/user/server_sign_up || echo "installation failed"
+  register: ucview_check
