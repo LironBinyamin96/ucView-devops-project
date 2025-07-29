@@ -1,10 +1,10 @@
 - name: Prepare public EC2 for UCView installation
-  delegate_to: "{{ public_ip }}" # all tasks in this block will run on the public EC2 instance
-  become: true # all tasks in this block will run with sudo (like root)
+  delegate_to: "{{ public_ip }}"
+  become: true 
   remote_user: "{{ ssh_user }}" 
   vars:
     ansible_ssh_private_key_file: "{{ local_key_path }}"
-    ansible_host_key_checking: False # disables the security prompt (as discussed)
+    ansible_host_key_checking: False 
   block:
 
     - name: Ensure /home/ubuntu has correct permissions
@@ -68,7 +68,7 @@
           - ucview-nginx8
         state: present
         update_cache: yes
-        force_apt_get: yes # Force apt-get usage, sometimes needed for noninteractive scenarios
+        force_apt_get: yes 
 
     - name: Verify UCView installation with curl
       ansible.builtin.shell: curl -I http://localhost/user/server_sign_up || echo "installation failed"

@@ -8,3 +8,6 @@ public-ec2 ansible_host=${var.private_ip_public_instance} ansible_user=ubuntu
 private-ec2 ansible_host=${var.private_ip} ansible_user=ubuntu
 EOT
 }
+
+
+

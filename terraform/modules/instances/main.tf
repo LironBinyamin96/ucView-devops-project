@@ -3,7 +3,7 @@ resource "aws_key_pair" "liron-key" {
   public_key = file("/var/lib/jenkins/.ssh/publicEC2-key.pub")
 }
 
-resource "aws_instance" "public" { # יצירת מכונה ציבורית
+resource "aws_instance" "public" { # public instance creation
   ami                         = var.ami_id
   instance_type               = "t3.medium"
   subnet_id                   = var.public_subnet_id
@@ -23,7 +23,7 @@ resource "aws_instance" "public" { # יצירת מכונה ציבורית
   }
 }
 
-resource "aws_instance" "private" { # יצירת מכונה פרטית
+resource "aws_instance" "private" { # private instance creation
   ami                         = var.ami_id
   instance_type               = "t3.medium"
   subnet_id                   = var.private_subnet_id
@@ -42,6 +42,8 @@ resource "aws_instance" "private" { # יצירת מכונה פרטית
     AutoShutdown  = "true"
   }
 }
+
+
 output "public_ip" {
   description = "The public IP address of the public instance"
   value = aws_instance.public.public_ip
